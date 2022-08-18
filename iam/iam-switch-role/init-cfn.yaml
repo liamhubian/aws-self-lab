@@ -1,6 +1,12 @@
 AWSTemplateFormatVersion: 2010-09-09
 Metadata:
-  # 'AWS::CloudFormation::Interface':
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      -
+        Parameters:
+          - ProjectName
+          - UserName
+          - Password
 
 Parameters:
   ProjectName:
@@ -8,23 +14,97 @@ Parameters:
     Type: String
     Default: "iam-switch-role"
 
+  UserName:
+    Description: Username that be used in lab
+    Type: String
+    Default: "iam-switch-role-demo-user"
+
+  Password:
+    Description: Password for demo user that be used in lab
+    Type: String
+    NoEcho: true
+
 Resources:
   IamUser:
-
-  IamUserPolicy:
-
-  IamUserAssumRoleRolicy:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Ref UserName
+      LoginProfile:
+        Password: !Ref Password
+        PasswordResetRequired: false
+      Tags:
+        - Key: lab
+          Value: iam-switch-role
+        - Key: project
+          Value: ProjectName
 
   IamRole01:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-iam-user-read-access-role
+      Description: IAM role
+      Policies:
+        - PolicyName: !Sub ${ProjectName}-iam-user-read-access-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "iam:*User*"
+                Resource: "*"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !GetAtt IamUser.Arn
+            Action:
+              - "sts:AssumeRole"
+      Tags:
+        - Key: lab
+          Value: iam-switch-role
+        - Key: project
+          Value: ProjectName
 
   IamRole02:
-
-  S3Bucket01:
-    Type: AWS::S3::Bucket
+    Type: AWS::IAM::Role
     Properties:
-      BucketName: ${ProjectName}-demo-bucket-01
+      RoleName: !Sub ${ProjectName}-iam-role-read-access-role
+      Description: IAM role
+      Policies:
+        - PolicyName: !Sub ${ProjectName}-iam-role-read-access-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "iam:*Role*"
+                Resource: "*"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !GetAtt IamUser.Arn
+            Action:
+              - "sts:AssumeRole"
+      Tags:
+        - Key: lab
+          Value: iam-switch-role
+        - Key: project
+          Value: ProjectName
 
-  S3Bucket02:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: ${ProjectName}-demo-bucket-02
+Outputs:
+  AccountId:
+    Description: IAM Account ID for switch role
+    Value: !Ref AWS::AccountId
+
+  IamRole01:
+    Description: IAM role name for switch role
+    Value: !Ref IamRole01
+
+  IamRole02:
+    Description: IAM role name for switch role
+    Value: !Ref IamRole02
