@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: 2010-09-09
+Metadata:
+  # 'AWS::CloudFormation::Interface':
+
+Parameters:
+  ProjectName:
+    Description: Project name or prefix name
+    Type: String
+    Default: "iam-switch-role"
+
+Resources:
+  IamUser:
+
+  IamUserPolicy:
+
+  IamUserAssumRoleRolicy:
+
+  IamRole01:
+
+  IamRole02:
+
+  S3Bucket01:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: ${ProjectName}-demo-bucket-01
+
+  S3Bucket02:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: ${ProjectName}-demo-bucket-02
