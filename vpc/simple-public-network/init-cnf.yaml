@@ -1,0 +1,195 @@
+AWSTemplateFormatVersion: 2010-09-09
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      -
+        Parameters:
+          - ProjectName
+      -
+        Parameters:
+          - VpcCidrBlock
+          - PublicSubnet1aCidrBlock
+          - PublicSubnet1aAvailabilityZone
+          - PublicSubnet1bCidrBlock
+          - PublicSubnet1bAvailabilityZone
+
+Parameters:
+  ProjectName:
+    Description: Project name
+    Type: String
+    Default: "iam-switch-role"
+
+  VpcCidrBlock:
+    Description: Vpc IPv4 CIDR block
+    Type: String
+    Default: "10.0.0.0/16"
+
+  PublicSubnet1aCidrBlock:
+    Description: Public Subnet 1a IPv4 CIDR block
+    Type: String
+    Default: "10.0.100.0/24"
+
+  PublicSubnet1aAvailabilityZone:
+    Description: Public subnet 1 AZ
+    Type: 'AWS::EC2::AvailabilityZone::Name'
+
+  PublicSubnet1bCidrBlock:
+    Description: Public Subnet 1b IPv4 CIDR block
+    Type: String
+    Default: "10.0.101.0/24"
+
+  PublicSubnet1bAvailabilityZone:
+    Description: Public subnet 2 AZ
+    Type: 'AWS::EC2::AvailabilityZone::Name'
+
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-simple-vpc
+        # - Key: lab
+        #   Value: simple-public-network
+        # - key: project
+        #   Value: !Ref ProjectName
+
+  PublicSubnet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref PublicSubnet1aCidrBlock
+      AvailabilityZone: !Ref PublicSubnet1aAvailabilityZone
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-public-subnet-1a
+        # - Key: lab
+        #   Value: simple-public-network
+        # - key: project
+        #   Value: !Ref ProjectName
+
+  PublicSubnet1b:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Ref PublicSubnet1bCidrBlock
+      AvailabilityZone: !Ref PublicSubnet1bAvailabilityZone
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-public-subnet-1b
+        # - Key: lab
+        #   Value: simple-public-network
+        # - key: project
+        #   Value: !Ref ProjectName
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-internet-gateway
+        # - Key: lab
+        #   Value: simple-public-network
+        # - key: project
+        #   Value: !Ref ProjectName
+
+  VpcGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref Vpc
+
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-Public-Route-Table
+
+  PublicSubnet1aRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1a
+
+  PublicSubnet1bRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1b
+
+  PublicRouterTableTrafficOutToInternetRule:
+    Type: 'AWS::EC2::Route'
+    DependsOn: VpcGatewayAttachment
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTable
+
+  Ec2TestInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0ff89c4ce7de192ea
+      InstanceType: t3.micro
+      SecurityGroupIds:
+        - !GetAtt SecurityGroup.GroupId
+      SubnetId: !Ref PublicSubnet1a
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-ec2-test-instance
+        # - Key: lab
+        #   Value: simple-public-network
+        # - key: project
+        #   Value: !Ref ProjectName
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ProjectName}-ec2-test-instance-sg
+      GroupDescription: Security Group for EC2 test instance
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-ec2-test-instance-sg
+        # - Key: lab
+        #   Value: simple-public-network
+        # - key: project
+        #   Value: !Ref ProjectName
+
+Outputs:
+  Vpc:
+    Description: AWS VPC ID Created
+    Value: !Ref Vpc
+
+  PublicSubnet1a:
+    Description: Public subnet 1a
+    Value: !Ref PublicSubnet1a
+
+  PublicSubnet1b:
+    Description: Public subnet 1b
+    Value: !Ref PublicSubnet1b
+
+  InternetGateway:
+    Description: VPC InternetGateway
+    Value: !Ref InternetGateway
+
+  PublicRouteTable:
+    Description: VPC route table for public access
+    Value: !Ref PublicRouteTable
+
+  Ec2TestInstance:
+    Description: EC2 instance for test public internet access
+    Value: !Ref Ec2TestInstance
+
+  SecurityGroup:
+    Description: Security Group for EC2 test insstance
+    Value: !Ref SecurityGroup
