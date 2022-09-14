@@ -17,7 +17,7 @@ Parameters:
   ProjectName:
     Description: Project name
     Type: String
-    Default: "iam-switch-role"
+    Default: "simple-vpc-lab"
 
   VpcCidrBlock:
     Description: Vpc IPv4 CIDR block
